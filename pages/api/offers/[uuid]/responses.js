@@ -4,10 +4,10 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import crypto from 'crypto';
 
 const dynamoClient = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: process.env.ZAWS_REGION || 'us-east-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.ZAWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.ZAWS_SECRET_ACCESS_KEY,
   },
 });
 
