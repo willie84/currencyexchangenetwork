@@ -10,10 +10,7 @@ const dynamoClient = new DynamoDBClient({
   },
 });
 
-const REQUESTS_TABLE =
-  process.env.DYNAMODB_REQUESTS_TABLE_NAME ||
-  process.env.DYNAMODB_TABLE_NAME ||
-  'FlowExOffers';
+const REQUESTS_TABLE = process.env.DYNAMODB_TABLE_NAME || 'FlowExOffers';
 const REQUEST_OFFERS_TABLE =
   process.env.DYNAMODB_REQUEST_OFFERS_TABLE_NAME || 'CurrencyExchangeRequestOffers';
 
