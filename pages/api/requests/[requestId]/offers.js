@@ -1,5 +1,5 @@
 // pages/api/requests/[requestId]/offers.js
-import { DynamoDBClient, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand, PutItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import crypto from 'crypto';
 
@@ -12,6 +12,7 @@ const dynamoClient = new DynamoDBClient({
 });
 
 const REQUEST_OFFERS_TABLE = process.env.DYNAMODB_REQUEST_OFFERS_TABLE_NAME || 'CurrencyExchangeRequestOffers';
+const REQUESTS_TABLE = process.env.DYNAMODB_TABLE_NAME || 'FlowExOffers';
 
 export default async function handler(req, res) {
   const { requestId } = req.query;
@@ -68,6 +69,52 @@ export default async function handler(req, res) {
       });
 
       await dynamoClient.send(command);
+      const loadRequestDetails = async (keyName) => {
+        const requestResponse = await dynamoClient.send(
+          new GetItemCommand({
+            TableName: REQUESTS_TABLE,
+            Key: marshall({ [keyName]: requestId }),
+          })
+        );
+        return requestResponse.Item ? unmarshall(requestResponse.Item) : null;
+      };
+
+      let requestItem = await loadRequestDetails('uuid');
+      if (!requestItem) {
+        requestItem = await loadRequestDetails('requestId');
+      }
+
+      const webhookUrl = process.env.N8N_OFFER_CREATED_WEBHOOK_URL;
+      if (!webhookUrl) {
+        return res.status(500).json({ error: 'Missing offer created webhook URL' });
+      }
+
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          offer: item,
+          responder: {
+            name: item.responderName,
+            email: item.responderEmail,
+            phone: item.responderPhone,
+          },
+          requester: requestItem ? {
+            name: requestItem.name || null,
+            email: requestItem.email || null,
+            phone: requestItem.phone || null,
+            needCurrency: requestItem.needCurrency || requestItem.wantCurrency || null,
+            haveCurrency: requestItem.haveCurrency || null,
+            haveAmount: requestItem.haveAmount || null,
+          } : null,
+        }),
+      });
+
+      if (!webhookResponse.ok) {
+        const text = await webhookResponse.text();
+        return res.status(502).json({ error: 'Webhook request failed', details: text });
+      }
+
       return res.status(201).json({ success: true, offerId: item.offerId });
     } catch (error) {
       console.error('Error creating request offer:', error);
