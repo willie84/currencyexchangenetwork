@@ -94,7 +94,6 @@ export default async function handler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           offer: item,
-          offerAmount: item.offerAmount,
           responder: {
             name: item.responderName,
             email: item.responderEmail,
